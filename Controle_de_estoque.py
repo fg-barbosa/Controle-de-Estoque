@@ -84,7 +84,7 @@ while True:
                     produtos.remove(produto)
                     print("Produto excluido com sucesso!")
 
-            break
+                    break
 
     elif opcao == '0':
         break
