@@ -6,6 +6,7 @@ Programa em Python para controlar produtos pelo terminal. Permite cadastrar iten
 
 - Cadastrar produtos com código, nome, valor e quantidade.
 - Listar os produtos e buscar por código, nome ou valor.
+- Buscar por parte do nome, sem diferenciar maiúsculas e minúsculas.
 - Alterar o nome, o valor ou a quantidade de um produto.
 - Remover produtos.
 - Registrar entradas e saídas do estoque.
@@ -47,7 +48,11 @@ O menu será exibido no terminal:
 
 Para experimentar, escolha `1` e cadastre um produto com código `1`, nome `Arroz`, valor `10.50` e quantidade `5`. Depois, use a opção `6` para registrar a entrada de mais `3` unidades desse código. Ao listar os produtos na opção `2`, a quantidade será `8`.
 
-Use ponto nos valores decimais, como `10.50`. As quantidades devem ser números inteiros; nas entradas e saídas, devem ser maiores que zero.
+Na opção `3`, digite `ARR` para encontrar o produto `Arroz`. A busca ignora espaços no começo e no fim do texto; se você deixar o campo vazio, nenhum produto será encontrado. Para buscar por código, digite o código completo. Para valores, pode usar vírgula ou ponto: `10,50` e `10.50` encontram o mesmo preço.
+
+Na listagem e nos resultados da busca, os valores aparecem sempre com duas casas decimais, como `10.00`.
+
+No cadastro e na alteração de preços, use vírgula ou ponto como separador decimal, por exemplo `10,50` ou `10.50`, sem separador de milhar. As quantidades devem ser números inteiros; nas entradas e saídas, devem ser maiores que zero.
 
 ## Testes
 
@@ -67,5 +72,3 @@ Os testes verificam cadastro, busca, alteração, exclusão, movimentações de 
 ## Limitações atuais
 
 Os produtos ficam apenas na memória: ao encerrar o programa, os dados são perdidos. Ainda não há salvamento em arquivo ou banco de dados.
-
-A busca exige o código, nome ou valor completo. Para nomes, diferencia maiúsculas de minúsculas; para valores, use o formato exibido na listagem, como `10.0`.

@@ -33,9 +33,16 @@ def adicionar_produto(produtos, codigo, nome, valor, quantidade):
 
 
 def pesquisar_produtos(produtos, busca):
+    busca = busca.strip()
+    if not busca:
+        return []
+    nome_buscado = busca.casefold()
+    valor_buscado = busca.replace(',', '.')
     return [
         produto for produto in produtos
-        if busca in (str(produto["codigo"]), produto["nome"], str(produto["valor"]))
+        if nome_buscado in produto["nome"].casefold()
+        or busca == str(produto["codigo"])
+        or valor_buscado in (str(produto["valor"]), f"{produto['valor']:.2f}")
     ]
 
 
@@ -99,7 +106,7 @@ def cadastrar_produto(produtos):
     try:
         codigo = int(input("Código do produto:"))
         nome = input("Nome do produto: ").strip()
-        valor = float(input("Valor do produto: "))
+        valor = float(input("Valor do produto: ").replace(',', '.'))
         quantidade = int(input("Quantidade de produtos: "))
     except ValueError:
         print("Digite um valor válido!")
@@ -118,11 +125,11 @@ def listar_produtos(produtos):
         return
     for produto in produtos:
         print(f"Código: {produto['codigo']}\nNome: {produto['nome']}\n"
-              f"Valor: {produto['valor']}\nQuantidade: {produto['quantidade']}")
+              f"Valor: {produto['valor']:.2f}\nQuantidade: {produto['quantidade']}")
 
 
 def buscar_produto(produtos):
-    busca = input("Digite código, nome ou valor do produto: ")
+    busca = input("Digite código, parte do nome ou valor do produto: ")
 
     encontrados = pesquisar_produtos(produtos, busca)
     listar_produtos(encontrados)
@@ -151,7 +158,7 @@ def alterar_estoque(produtos):
             novo_dado = input("Novo nome: ")
         elif escolha == '2':
             campo = "valor"
-            novo_dado = float(input("Novo valor: "))
+            novo_dado = float(input("Novo valor: ").replace(',', '.'))
         elif escolha == '3':
             campo = "quantidade"
             novo_dado = int(input("Qual a nova quantidade: "))

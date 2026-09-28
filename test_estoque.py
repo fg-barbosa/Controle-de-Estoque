@@ -82,9 +82,27 @@ class RegrasEstoqueTest(unittest.TestCase):
                 self.assertEqual(self.produtos, antes)
 
     def test_busca_por_codigo_nome_e_valor(self):
-        for busca in ('2', 'Feijão', '20.0'):
-            self.assertEqual(estoque.pesquisar_produtos(self.produtos, busca), [self.produtos[1]])
-        self.assertEqual(estoque.pesquisar_produtos(self.produtos, 'ausente'), [])
+        for busca in ('2', 'Feijão', 'FEIJÃO', 'FeI', 'JÃO', ' fei ',
+                      '20.0', '20.00', '20,0', '20,00'):
+            with self.subTest(busca=busca):
+                self.assertEqual(estoque.pesquisar_produtos(self.produtos, busca), [self.produtos[1]])
+        for busca in ('ausente', '', '   '):
+            with self.subTest(busca=busca):
+                self.assertEqual(estoque.pesquisar_produtos(self.produtos, busca), [])
+
+    def test_busca_parcial_retorna_todos_os_nomes_correspondentes(self):
+        integral = estoque.adicionar_produto(self.produtos, 3, 'Arroz integral', 15.5, 4)
+        self.assertEqual(estoque.pesquisar_produtos(self.produtos, 'ARR'),
+                         [self.produtos[0], integral])
+        for busca in ('15.50', '15,50', ' 15,5 '):
+            with self.subTest(busca=busca):
+                self.assertEqual(estoque.pesquisar_produtos(self.produtos, busca), [integral])
+
+    def test_busca_nao_usa_prefixos_de_codigos_ou_valores(self):
+        estoque.adicionar_produto(self.produtos, 21, 'Café', 200.0, 1)
+        self.assertEqual(estoque.pesquisar_produtos(self.produtos, '2'), [self.produtos[1]])
+        self.assertEqual(estoque.pesquisar_produtos(self.produtos, '20.00'), [self.produtos[1]])
+        self.assertEqual(estoque.pesquisar_produtos(self.produtos, '200.'), [])
 
     def test_exclusao(self):
         estoque.excluir_produto(self.produtos, 2)
@@ -94,6 +112,34 @@ class RegrasEstoqueTest(unittest.TestCase):
 
 
 class TerminalEstoqueTest(unittest.TestCase):
+    def test_cadastro_e_alteracao_aceitam_virgula_e_ponto(self):
+        for valor_inicial, novo_valor in [('10,50', '20.75'), ('10.50', '20,75')]:
+            with self.subTest(valor_inicial=valor_inicial, novo_valor=novo_valor):
+                produtos = []
+                with patch('builtins.input', side_effect=['1', 'Arroz', valor_inicial, '5']), \
+                        redirect_stdout(StringIO()):
+                    estoque.cadastrar_produto(produtos)
+                self.assertEqual(produtos[0]['valor'], 10.5)
+                with patch('builtins.input', side_effect=['1', '2', novo_valor]), \
+                        redirect_stdout(StringIO()):
+                    estoque.alterar_estoque(produtos)
+                self.assertEqual(produtos[0]['valor'], 20.75)
+
+    def test_preco_invalido_nao_cadastra_nem_altera_produto(self):
+        for valor in ('10,5.0', '10,,50', 'abc', '', '-1,50', '0,00', 'nan', 'inf'):
+            with self.subTest(valor=valor):
+                produtos = []
+                with patch('builtins.input', side_effect=['1', 'Arroz', valor, '5']), \
+                        redirect_stdout(StringIO()):
+                    estoque.cadastrar_produto(produtos)
+                self.assertEqual(produtos, [])
+                estoque.adicionar_produto(produtos, 1, 'Arroz', 10.5, 5)
+                antes = deepcopy(produtos)
+                with patch('builtins.input', side_effect=['1', '2', valor]), \
+                        redirect_stdout(StringIO()):
+                    estoque.alterar_estoque(produtos)
+                self.assertEqual(produtos, antes)
+
     def test_entrada_invalida_e_regra_exibem_mensagens(self):
         for respostas, mensagem in [(['abc'], 'números inteiros'),
                                      (['99', '1'], 'Produto não encontrado')]:
@@ -106,9 +152,9 @@ class TerminalEstoqueTest(unittest.TestCase):
     def test_fluxo_completo_do_menu(self):
         respostas = [
             '1', '1', 'Arroz', '10', '5',
-            '1', '2', 'Feijão', '20', '8',
+            '1', '2', 'Feijão', '20.5', '8',
             '6', '2', '3', '7', '2', '4',
-            '4', '2', '1', 'Café', '3', 'Café', '2',
+            '4', '2', '1', 'Café', '3', 'AFÉ', '2',
             '5', '1', '7', '2', '8', '7', '2', '7',
             '9', '0',
         ]
@@ -121,8 +167,10 @@ class TerminalEstoqueTest(unittest.TestCase):
             'Produto alterado com sucesso!', 'Nome: Café', 'Quantidade: 7',
             'Produto excluído com sucesso!', 'Estoque insuficiente.',
             'Saída registrada! Estoque atual: 0', 'Opção inválida.',
+            'Nome: Arroz\nValor: 10.00\nQuantidade: 5',
         ):
             self.assertIn(mensagem, saida.getvalue())
+        self.assertEqual(saida.getvalue().count('Nome: Café\nValor: 20.50\nQuantidade: 7'), 2)
 
 
 if __name__ == '__main__':
