@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="painel">
+    <h1>Seu estoque em um só lugar</h1>
+    <p>Cadastre produtos e consulte preços e quantidades disponíveis.</p>
+    <p><strong>{{ total_produtos }}</strong> produto(s) cadastrado(s).</p>
+    <div class="acoes">
+        <a class="botao" href="{{ url_for('cadastrar') }}">Cadastrar produto</a>
+        <a class="botao secundario" href="{{ url_for('listar_produtos') }}">Ver produtos</a>
+    </div>
+</section>
+{% endblock %}

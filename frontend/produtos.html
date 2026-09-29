@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Produtos · Controle de Estoque{% endblock %}
+{% block content %}
+<section class="painel">
+    <div class="titulo">
+        <h1>Produtos</h1>
+        <a class="botao" href="{{ url_for('cadastrar') }}">Cadastrar produto</a>
+    </div>
+    <form class="busca" method="get" action="{{ url_for('listar_produtos') }}">
+        <label for="busca">Buscar por código, nome ou preço</label>
+        <div class="acoes">
+            <input id="busca" name="busca" type="search" value="{{ busca }}" placeholder="Ex.: arroz ou 10,50">
+            <button type="submit">Buscar</button>
+            {% if busca %}<a href="{{ url_for('listar_produtos') }}">Limpar</a>{% endif %}
+        </div>
+    </form>
+    {% if produtos %}
+    <div class="tabela">
+        <table>
+            <caption>{{ produtos | length }} produto(s) encontrado(s)</caption>
+            <thead><tr><th scope="col">Código</th><th scope="col">Nome</th><th scope="col">Preço</th><th scope="col">Quantidade</th></tr></thead>
+            <tbody>
+            {% for produto in produtos %}
+                <tr>
+                    <td>{{ produto.codigo }}</td>
+                    <td>{{ produto.nome }}</td>
+                    <td>R$ {{ '{:.2f}'.format(produto.valor).replace('.', ',') }}</td>
+                    <td>{{ produto.quantidade }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% elif busca %}
+        <p>Nenhum produto encontrado para esta busca.</p>
+    {% else %}
+        <p>Nenhum produto cadastrado. Cadastre o primeiro produto para começar.</p>
+    {% endif %}
+</section>
+{% endblock %}

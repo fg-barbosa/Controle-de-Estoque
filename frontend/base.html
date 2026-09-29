@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Controle de Estoque{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="cabecalho">
+        <a class="marca" href="{{ url_for('index') }}">Controle de Estoque</a>
+        <nav aria-label="Menu principal">
+            <a href="{{ url_for('index') }}">Início</a>
+            <a href="{{ url_for('listar_produtos') }}">Produtos</a>
+            <a href="{{ url_for('cadastrar') }}">Cadastrar</a>
+        </nav>
+    </header>
+    <main>
+        {% for categoria, mensagem in get_flashed_messages(with_categories=true) %}
+            <p class="mensagem {{ categoria }}" role="status">{{ mensagem }}</p>
+        {% endfor %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

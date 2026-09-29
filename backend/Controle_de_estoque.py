@@ -1,4 +1,26 @@
-from math import isfinite
+from decimal import Decimal, InvalidOperation, localcontext
+import re
+
+
+def normalizar_valor(valor):
+    """Converte o preço para Decimal em centavos, sem arredondar o valor informado."""
+    texto = str(valor).strip().replace(',', '.')
+    if isinstance(valor, str) and not re.fullmatch(r"[+-]?[0-9]+(?:\.[0-9]+)?", texto):
+        raise ValueError("Informe um preço válido, usando vírgula ou ponto.")
+    try:
+        numero = Decimal(texto)
+    except InvalidOperation:
+        raise ValueError("Informe um preço válido, usando vírgula ou ponto.") from None
+    if not numero.is_finite() or numero <= 0:
+        raise ValueError("O valor deve ser um número finito maior que 0.")
+
+    # A precisão acompanha os dígitos recebidos, inclusive nos preços grandes.
+    with localcontext() as contexto:
+        contexto.prec = max(28, len(numero.as_tuple().digits), numero.adjusted() + 3)
+        centavos = numero.quantize(Decimal("0.01"))
+    if numero != centavos:
+        raise ValueError("O preço deve ter no máximo duas casas decimais, sem frações de centavo.")
+    return centavos
 
 
 # Regras do estoque: recebem dados e retornam resultados, sem input ou print.
@@ -12,16 +34,16 @@ def obter_produto(produtos, codigo):
 def validar_dados_produto(nome, valor, quantidade):
     if not nome.strip():
         raise ValueError("O nome não pode estar vazio.")
-    if not isfinite(valor) or valor <= 0:
-        raise ValueError("O valor deve ser um número finito maior que 0.")
+    valor = normalizar_valor(valor)
     if type(quantidade) is not int or quantidade < 0:
         raise ValueError("A quantidade deve ser um número inteiro maior ou igual a 0.")
+    return valor
 
 
 def adicionar_produto(produtos, codigo, nome, valor, quantidade):
     if any(produto["codigo"] == codigo for produto in produtos):
         raise ValueError("Já existe um produto com este código!")
-    validar_dados_produto(nome, valor, quantidade)
+    valor = validar_dados_produto(nome, valor, quantidade)
     produto = {
         "codigo": codigo,
         "nome": nome.strip(),
@@ -37,12 +59,15 @@ def pesquisar_produtos(produtos, busca):
     if not busca:
         return []
     nome_buscado = busca.casefold()
-    valor_buscado = busca.replace(',', '.')
+    try:
+        valor_buscado = normalizar_valor(busca)
+    except ValueError:
+        valor_buscado = None
     return [
         produto for produto in produtos
         if nome_buscado in produto["nome"].casefold()
         or busca == str(produto["codigo"])
-        or valor_buscado in (str(produto["valor"]), f"{produto['valor']:.2f}")
+        or (valor_buscado is not None and valor_buscado == produto["valor"])
     ]
 
 
@@ -52,7 +77,9 @@ def atualizar_produto(produtos, codigo, campo, novo_dado):
         raise ValueError("Campo inválido.")
     atualizado = produto.copy()
     atualizado[campo] = novo_dado
-    validar_dados_produto(atualizado["nome"], atualizado["valor"], atualizado["quantidade"])
+    atualizado["valor"] = validar_dados_produto(
+        atualizado["nome"], atualizado["valor"], atualizado["quantidade"]
+    )
     atualizado["nome"] = atualizado["nome"].strip()
     produto.update(atualizado)
     return produto
@@ -106,7 +133,7 @@ def cadastrar_produto(produtos):
     try:
         codigo = int(input("Código do produto:"))
         nome = input("Nome do produto: ").strip()
-        valor = float(input("Valor do produto: ").replace(',', '.'))
+        valor = input("Valor do produto: ")
         quantidade = int(input("Quantidade de produtos: "))
     except ValueError:
         print("Digite um valor válido!")
@@ -158,7 +185,7 @@ def alterar_estoque(produtos):
             novo_dado = input("Novo nome: ")
         elif escolha == '2':
             campo = "valor"
-            novo_dado = float(input("Novo valor: ").replace(',', '.'))
+            novo_dado = input("Novo valor: ")
         elif escolha == '3':
             campo = "quantidade"
             novo_dado = int(input("Qual a nova quantidade: "))
