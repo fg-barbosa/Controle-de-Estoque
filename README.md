@@ -6,12 +6,16 @@ Nesta primeira etapa da integração web, é possível cadastrar, listar e busca
 
 ## O que dá para fazer
 
-- Cadastrar produtos com código, nome, valor e quantidade.
-- Listar os produtos e buscar por código, nome ou valor.
-- Buscar por parte do nome, sem diferenciar maiúsculas e minúsculas.
-- Alterar o nome, o valor ou a quantidade de um produto.
-- Remover produtos.
-- Registrar entradas e saídas do estoque.
+| Funcionalidade | Navegador | Terminal |
+| --- | --- | --- |
+| Cadastrar produtos com código, nome, valor e quantidade | Sim | Sim |
+| Listar produtos e buscar por código, nome ou valor | Sim | Sim |
+| Buscar por parte do nome, sem diferenciar maiúsculas e minúsculas | Sim | Sim |
+| Alterar nome, valor ou quantidade | Ainda não | Sim |
+| Remover produtos | Ainda não | Sim |
+| Registrar entradas e saídas do estoque | Ainda não | Sim |
+
+A interface web possui páginas de início, listagem e cadastro, com estilos adaptados para telas pequenas e rolagem horizontal da tabela quando necessário.
 
 O programa impede códigos duplicados, nomes vazios, valores inválidos e saídas maiores que a quantidade disponível.
 
@@ -43,9 +47,19 @@ No Python do MSYS2, usado neste ambiente, a pasta do executável é `bin`:
 .\.venv\bin\python.exe -m flask --app backend.app run
 ```
 
-No Linux/macOS, use `.venv/bin/python` nos comandos acima. Não é necessário ativar o ambiente quando o caminho do executável é informado.
+No Linux/macOS:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m flask --app backend.app run
+```
+
+Não é necessário ativar o ambiente quando o caminho do executável é informado.
 
 Abra http://127.0.0.1:5000 no navegador. Inicie o servidor na raiz do projeto; abrir os arquivos HTML diretamente não processa os templates.
+
+Para experimentar, acesse **Cadastrar**, informe código `1`, nome `Arroz`, valor `10,50` e quantidade `5`, e salve. O produto aparecerá em **Produtos**, onde você poderá buscar por `Arroz`, `1` ou `10,50`.
 
 | Rota | Método | Função |
 | --- | --- | --- |
@@ -91,6 +105,13 @@ Na listagem e nos resultados da busca, os valores aparecem sempre com duas casas
 No cadastro e na alteração de preços, use vírgula ou ponto como separador decimal, por exemplo `10,50` ou `10.50`, sem separador de milhar ou notação científica. Os preços são armazenados como `Decimal`, com precisão de centavos. Valores com frações de centavo, como `0,001` ou `2,675`, são rejeitados sem arredondamento; zeros adicionais, como em `10,500`, são aceitos. A busca por preço compara o valor numérico: `10`, `10,0` e `10.00` encontram o mesmo preço.
 
 As quantidades devem ser números inteiros; nas entradas e saídas, devem ser maiores que zero.
+
+### Como parar o programa
+
+- **Servidor web:** pressione `Ctrl+C` no terminal em que o Flask está rodando. Fechar a aba do navegador não encerra o servidor.
+- **Menu no terminal:** escolha `0 - Sair`.
+
+Ao encerrar o programa, os produtos cadastrados naquela execução são perdidos, pois o estoque ainda fica apenas na memória.
 
 ## Testes
 
