@@ -4,6 +4,8 @@ Programa em Python para controlar produtos, com uma interface web em Flask e um 
 
 Nesta primeira etapa da integração web, é possível cadastrar, listar e buscar produtos pelo navegador. Alteração, exclusão, entradas e saídas continuam disponíveis pelo terminal.
 
+O módulo `backend/connmysql.py` permite testar a conexão e inserir produtos permanentemente no MySQL. A integração desse módulo com as telas e o menu ainda está pendente: os cadastros feitos por essas interfaces continuam em memória.
+
 ## O que dá para fazer
 
 | Funcionalidade | Navegador | Terminal |
@@ -21,7 +23,7 @@ O programa impede códigos duplicados, nomes vazios, valores inválidos e saída
 
 ## Como executar
 
-É necessário ter o Python 3.9 ou superior instalado.
+É necessário ter o Python 3.10 ou superior instalado. Para usar o módulo de banco, também é necessário um servidor MySQL; a configuração local foi verificada no MySQL 8.0.46.
 
 Baixe o repositório ou clone com o Git:
 
@@ -106,12 +108,72 @@ No cadastro e na alteração de preços, use vírgula ou ponto como separador de
 
 As quantidades devem ser números inteiros; nas entradas e saídas, devem ser maiores que zero.
 
+### Conexão com o MySQL local
+
+Instale as dependências do `requirements.txt` no ambiente virtual, conforme as instruções acima. Elas incluem Flask, MySQL Connector/Python e python-dotenv, que carrega a configuração do arquivo `.env`.
+
+Para um banco novo, execute no MySQL Workbench com um usuário administrador:
+
+```sql
+CREATE DATABASE controle_estoque
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+USE controle_estoque;
+
+CREATE TABLE produtos (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    codigo INT NOT NULL UNIQUE,
+    nome VARCHAR(100) NOT NULL,
+    valor DECIMAL(10,2) NOT NULL,
+    quantidade INT NOT NULL,
+    CONSTRAINT chk_produtos_valor CHECK (valor > 0),
+    CONSTRAINT chk_produtos_quantidade CHECK (quantidade >= 0),
+    CONSTRAINT chk_produtos_nome CHECK (CHAR_LENGTH(TRIM(nome)) > 0)
+) ENGINE=InnoDB;
+```
+
+Os `CHECK` exigem MySQL 8.0.16 ou superior. Se o banco e a tabela já existem, confira a estrutura com `SHOW CREATE TABLE controle_estoque.produtos;` em vez de repetir sua criação.
+
+Crie um usuário exclusivo para a aplicação. Substitua a senha abaixo antes de executar; se esse usuário já foi criado, pule esta etapa:
+
+```sql
+CREATE USER 'estoque_app'@'localhost'
+    IDENTIFIED BY 'SUBSTITUA_POR_UMA_SENHA';
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+    ON controle_estoque.* TO 'estoque_app'@'localhost';
+
+SHOW GRANTS FOR 'estoque_app'@'localhost';
+```
+
+Na raiz do projeto, copie `.env.example` para `.env` **somente se ainda não houver um `.env` local**:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Edite o `.env` e preencha `MYSQL_PASSWORD` com a senha desse usuário. Use aspas simples ao redor da senha. Confira também `MYSQL_USER=estoque_app`, o host, a porta e o nome do banco. O `.env` contém suas credenciais locais e é ignorado pelo Git; apenas `.env.example`, sem senha, deve ser publicado. O arquivo não criptografa a senha.
+
+A configuração é lida da raiz do projeto, independentemente da pasta de execução. Variáveis de ambiente já definidas têm prioridade sobre o `.env`.
+
+Teste a conexão, na raiz do projeto:
+
+```powershell
+.\.venv\Scripts\python.exe -m backend.connmysql
+```
+
+No MSYS2 ou Linux/macOS, ajuste o executável para `.venv/bin/python`. A mensagem esperada é `Conexao e tabela produtos verificadas com sucesso!`. Esse comando consulta a estrutura da tabela e não cadastra produtos.
+
+A função `inserir_produto(codigo, nome, valor, quantidade)` executa um `INSERT` parametrizado e confirma a transação com `commit()`. Em erro do MySQL, faz `rollback()`; o cursor e a conexão são fechados ao terminar. Ela ainda não aplica as validações das interfaces, que serão incorporadas na integração.
+
+Próximas etapas: ligar o cadastro ao MySQL; consultar listagem, busca e total pelo banco; tratar erros na interface; testar os dados após reiniciar a aplicação; integrar alterações e movimentações do estoque.
+
 ### Como parar o programa
 
 - **Servidor web:** pressione `Ctrl+C` no terminal em que o Flask está rodando. Fechar a aba do navegador não encerra o servidor.
 - **Menu no terminal:** escolha `0 - Sair`.
 
-Ao encerrar o programa, os produtos cadastrados naquela execução são perdidos, pois o estoque ainda fica apenas na memória.
+Ao encerrar a interface web ou o menu, seus produtos são perdidos, pois essas interfaces ainda usam memória. Produtos inseridos pelo módulo MySQL e confirmados com `commit()` permanecem no banco.
 
 ## Testes
 
@@ -125,18 +187,22 @@ Use o Python do ambiente virtual para incluir os testes Flask, por exemplo: `.\.
 
 Os testes verificam as regras de estoque, o fluxo do terminal e a integração web: páginas, cadastro, busca, validações, precisão dos preços, cadastros concorrentes, redirecionamento, proteção CSRF e escape de HTML.
 
+Essa suíte não precisa de MySQL e ainda não cobre a integração com o banco. Para verificar a conexão real, use `python -m backend.connmysql` no ambiente configurado.
+
 ## Arquivos principais
 
 - `backend/Controle_de_estoque.py`: regras do estoque e interação pelo terminal.
 - `backend/app.py`: criação da aplicação Flask e rotas web.
+- `backend/connmysql.py`: configuração, teste de conexão e inserção no MySQL.
 - `backend/test_estoque.py` e `backend/test_app.py`: testes com `unittest`.
 - `frontend/`: templates HTML renderizados pelo Flask.
 - `design/style.css`: estilos servidos pelo Flask.
-- `requirements.txt`: dependências da interface web.
+- `requirements.txt`: dependências da interface web e da conexão MySQL.
+- `.env.example`: modelo de configuração sem credenciais reais.
 
 ## Limitações atuais
 
-Os produtos ficam apenas na memória: ao reiniciar o servidor ou encerrar o terminal, os dados são perdidos. O terminal e a interface web têm estoques independentes. Ainda não há salvamento em arquivo ou banco de dados.
+O terminal e a interface web têm estoques independentes em memória. O módulo MySQL já permite inserções permanentes, mas ainda não é chamado por essas interfaces.
 
 A aplicação web é uma base para desenvolvimento local, sem autenticação. Uma única instância compartilha o estoque entre os navegadores; múltiplos processos teriam listas separadas. A chave de sessão é gerada a cada inicialização, ou pode ser definida pela variável de ambiente `SECRET_KEY`. Reiniciar sem chave fixa também invalida as sessões e os formulários abertos.
 
